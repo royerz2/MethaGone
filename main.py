@@ -9,16 +9,7 @@ e = None
 # Parameters
 sensor_count = 2
 
-device_ports = list(ports.comports())  # create a list of serial ports
-for i in device_ports:
-    try:
-        print('Trying to connect port: ', i)
-        ser = serial.Serial(i, 9600, timeout=5)
-    except serial.serialutil.SerialException:
-        print('RX not here, checking next port...')
-    except Exception as e:
-        print(e)
-        exit()
+# Functions
 
 
 def csv_writer(sensor):
@@ -35,6 +26,18 @@ def csv_writer(sensor):
 
     except Exception as e:
         print(e)
+
+
+device_ports = list(ports.comports())  # create a list of serial ports
+for i in device_ports:
+    try:
+        print('Trying to connect port: ', i)
+        ser = serial.Serial(i, 9600, timeout=5)
+    except serial.serialutil.SerialException:
+        print('RX not here, checking next port...')
+    except Exception as e:
+        print(e)
+        exit()
 
 
 for i in range(sensor_count):
