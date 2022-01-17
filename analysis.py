@@ -34,13 +34,23 @@ methane2, hydrogen2, humidity2, temperture2, time2 = assign_arrays(df2)
 fig, ax = plt.subplots()
 
 
+
+
+def three_moving_average(raw_array):
+    averaged_array = np.array([])
+    for i in range(len(raw_array)-2):
+        average = (raw_array[i] + raw_array[i + 1] + raw_array[i + 2])/3
+        averaged_array = np.append(averaged_array, average)
+    return averaged_array
+
+
 myLocator = mticker.MultipleLocator(50)
 
-plt.plot_date(time1, methane1)
+plt.plot_date(time2, methane2, linestyle='solid')
 ax.xaxis.set_major_locator(myLocator)
 
+plt.gcf().autofmt_xdate()
 
-fig.autofmt_xdate()
 plt.tight_layout()
 
 plt.show()
