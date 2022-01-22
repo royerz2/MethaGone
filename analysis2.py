@@ -9,59 +9,72 @@ from tqdm import tqdm
 df1 = pd.read_csv("sensor1.csv")  # Assigns sensor data from probe 1 to variable.
 df2 = pd.read_csv("sensor2.csv")  # Assigns sensor data from probe 2 to variable.
 
-
 #################################################### PARAMETERS #######################################################
 
 start_index = 1758  # Set to zero to begin from initial entry.
 end_index = 9999  # Set to len(df1.index) to go to the end.
-applyThreshold = False  # See the plot with threshold values, then turn to true.
-applyAntiAliasing = False
+applyThreshold = True  # See the plot with threshold values, then turn to true.
+applyAntiAliasing = True  # See the plot before Anti-Aliasing, then turn to true.
 
 plt.style.use("seaborn")  # Sets design language of the plots.
 myLocator = mticker.MultipleLocator(100)  # Sets x axis timestamp frequency.
+
 
 #######################################################################################################################
 
 class Data:  # Defines analysis algorithm for data object. Acts as a meta-function.
     def __init__(self, dataframe, rolling_avg):
+        self.data = dataframe.drop(index=df1.index[:start_index],
+                                   axis=0)  # Sets min point of data range to be analyzed.
 
-        self.data = self.data.drop(index=df1.index[:start_index],
-                                        axis=0, inplace=True)  # Sets min point of data range to be analyzed.
         self.data = self.data.drop(index=df1.index[(end_index + 1):],
-                                        axis=0, inplace=True)  # Sets max point of data range to be analyzed.
+                                   axis=0)  # Sets max point of data range to be analyzed.
 
         self.data = self.data.reset_index(drop=True)  # Reset index to prevent gaps that raise errors during averaging.
 
         if applyThreshold:
-            #Apply thresholds to dataframe for plot readability.
-            droplist = self.data[(self.data.methane < 200) or
-                                 (self.data.hydrogen < 200) or
-                                 (self.data.temperature < 20) or
-                                 (self.data.humidity < 20) or
-                                 (self.data.methane > 1023) or
+            # Apply thresholds to dataframe for plot readability.
+            droplist = self.data[(self.data.methane < 200) |
+                                 (self.data.hydrogen < 200) |
+                                 (self.data.temperature < 20) |
+                                 (self.data.humidity < 20) |
+                                 (self.data.methane > 1023) |
                                  (self.data.hydrogen > 1023)].index
 
             self.data = self.data.drop(droplist)
 
             self.data = self.data.reset_index(drop=True)
 
-        self.data.df_describe()
+        print('Data description prior to data wrangling')
+        df_describe(self.data)
 
         print(df1)  # Provides overview of the dataframe to be analyzed.
-
 
         df_describe(self.data)  # Describes general aspects of the data; Var, Avg, Corr.
 
         # Applies rolling average method to smoothen the data.
-        self.rolling_methane = x_moving_average(self.data.methane)
-        self.rolling_hydrogen = x_moving_average(self.data.hydrogen)
+        if applyAntiAliasing:
 
-        df_to_Plot =
+            self.toPlot = pd.DataFrame({'methane': x_moving_average(self.data.methane, rolling_avg),
+                                        'hydrogen': x_moving_average(self.data.hydrogen, rolling_avg),
+                                        'time': self.data.time,
+                                        'humidity': self.data.humidity,
+                                        'temperature': self.data.temperature},
+                                       columns=['methane', 'hydrogen', 'time', 'humidity', 'temperature'])
 
-        request_plot(self.smoothened_df)  # Applies rolling average method to smoothen the data.
+            print(self.toPlot.head(5))
+
+            request_plot(self.toPlot, 'Sensor 1 Data')  # Applies rolling average method to smoothen the data.
+
+        else:
+            request_plot(self.data, 'Sensor 1 Data')
+
+        print('Data description after data wrangling')
+        df_describe(self.data)
 
 
 def x_moving_average(raw_array, x):
+
     if (x % 2) == 0:
         print("{0} is Even number".format(x))
         print("Rolling average value should be an odd number.")
@@ -72,25 +85,18 @@ def x_moving_average(raw_array, x):
     span = int(x / 2 - 0.5)
 
     tbai = raw_array[:span]
-    print(tbai)
     tbaf = raw_array[len(raw_array) - span:]
-    print(tbaf)
+
     averaged_array = np.append(averaged_array, tbai)
 
-    for i in range(span, len(raw_array) - span):
+    for i in tqdm(range(span, len(raw_array) - span)):
         sumlist = []
-        print(i)
         for k in range(i - span, i + span + 1):
             if raw_array[k] != "n/a":
                 sumlist.append(raw_array[k])
-            print(k)
-            print(sumlist)
         tba = sum(sumlist) / x
-        print(tba)
 
         averaged_array = np.append(averaged_array, tba)
-
-        print(averaged_array)
 
     averaged_array = np.append(averaged_array, tbaf)
 
@@ -108,7 +114,6 @@ def anti_aliasing(dataframe):
 
 
 def request_plot(dataframe, title):
-
     fig, (ax1, ax2, ax3, ax4) = plt.subplots(4)
 
     fig.suptitle(title)
@@ -160,18 +165,18 @@ def time_filler(dataframe):
 
             time_list[2] = str(int(time_list[2]) + 1)
 
-        elif int(time_list[2]) is 59 and int(time_list[1]) < 59:
+        elif int(time_list[2]) == 59 and int(time_list[1]) < 59:
 
             time_list[2] = "00"
             time_list[1] = str(int(time_list[1]) + 1)
 
-        elif int(time_list[1]) is 59 and int(time_list[0]) < 23:
+        elif int(time_list[1]) == 59 and int(time_list[0]) < 23:
 
             time_list[2] = "00"
             time_list[1] = "00"
             time_list[0] = str(int(time_list[0]) + 1)
 
-        elif int(time_list[0]) is 23:
+        elif int(time_list[0]) == 23:
 
             time_list[2] = "00"
             time_list[1] = "00"
