@@ -1,34 +1,67 @@
-import pandas as pd
-import numpy as np
-from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
-from matplotlib.pyplot import figure
-from matplotlib.dates import DayLocator, HourLocator, DateFormatter, drange
 import matplotlib.ticker as mticker
-from tqdm import tqdm
+import numpy as np
+import pandas as pd
 import pendulum
+from matplotlib.pyplot import figure
+from tqdm import tqdm
+
+df1 = pd.read_csv("sensor1.csv")  # Assigns sensor data from probe 1 to variable.
+df2 = pd.read_csv("sensor2.csv")  # Assigns sensor data from probe 2 to variable.
 
 
-df1 = pd.read_csv("sensor1.csv")
-df2 = pd.read_csv("sensor2.csv")
+#################################################### PARAMETERS #######################################################
 
-plt.style.use("seaborn")
-myLocator = mticker.MultipleLocator(50)
+start_index = 1758  # Set to zero to begin from initial entry.
+end_index = 9999  # Set to len(df1.index) to go to the end.
+applyThreshold = False  # See the plot with threshold values, then turn to true.
+applyAntiAliasing = False
+
+plt.style.use("seaborn")  # Sets design language of the plots.
+myLocator = mticker.MultipleLocator(100)  # Sets x axis timestamp frequency.
+
+#######################################################################################################################
+
+class Data:  # Defines analysis algorithm for data object. Acts as a meta-function.
+    def __init__(self, dataframe, rolling_avg):
+
+        self.data = self.data.drop(index=df1.index[:start_index],
+                                        axis=0, inplace=True)  # Sets min point of data range to be analyzed.
+        self.data = self.data.drop(index=df1.index[(end_index + 1):],
+                                        axis=0, inplace=True)  # Sets max point of data range to be analyzed.
+
+        self.data = self.data.reset_index(drop=True)  # Reset index to prevent gaps that raise errors during averaging.
+
+        if applyThreshold:
+            #Apply thresholds to dataframe for plot readability.
+            droplist = self.data[(self.data.methane < 200) or
+                                 (self.data.hydrogen < 200) or
+                                 (self.data.temperature < 20) or
+                                 (self.data.humidity < 20) or
+                                 (self.data.methane > 1023) or
+                                 (self.data.hydrogen > 1023)].index
+
+            self.data = self.data.drop(droplist)
+
+            self.data = self.data.reset_index(drop=True)
+
+        self.data.df_describe()
+
+        print(df1)  # Provides overview of the dataframe to be analyzed.
 
 
-class Data:
-    def __init__(self, dataFrame, rolling_avg):
-        self.rolling_avg = rolling_avg
-        self.dataFrame = dataFrame
+        df_describe(self.data)  # Describes general aspects of the data; Var, Avg, Corr.
 
-        self.filled_df = time_filler(self.dataFrame)
-        self.smoothened_df = x_moving_average(self.filled_df, 7)
+        # Applies rolling average method to smoothen the data.
+        self.rolling_methane = x_moving_average(self.data.methane)
+        self.rolling_hydrogen = x_moving_average(self.data.hydrogen)
 
-        request_plot(self.smoothened_df)
+        df_to_Plot =
+
+        request_plot(self.smoothened_df)  # Applies rolling average method to smoothen the data.
 
 
 def x_moving_average(raw_array, x):
-
     if (x % 2) == 0:
         print("{0} is Even number".format(x))
         print("Rolling average value should be an odd number.")
@@ -36,7 +69,7 @@ def x_moving_average(raw_array, x):
 
     averaged_array = np.array([])
 
-    span = int(x/2-0.5)
+    span = int(x / 2 - 0.5)
 
     tbai = raw_array[:span]
     print(tbai)
@@ -47,12 +80,12 @@ def x_moving_average(raw_array, x):
     for i in range(span, len(raw_array) - span):
         sumlist = []
         print(i)
-        for k in range(i - span, i + span +1):
+        for k in range(i - span, i + span + 1):
             if raw_array[k] != "n/a":
                 sumlist.append(raw_array[k])
             print(k)
             print(sumlist)
-        tba = sum(sumlist)/x
+        tba = sum(sumlist) / x
         print(tba)
 
         averaged_array = np.append(averaged_array, tba)
@@ -64,20 +97,31 @@ def x_moving_average(raw_array, x):
     return averaged_array
 
 
+def anti_aliasing(dataframe):
+    for i in tqdm(range(start_index, end_index)):
+
+        if (abs(dataframe.hydrogen[i] - dataframe.hydrogen[i + 1]) > 100) or \
+                (abs(dataframe.hydrogen[i + 1] - dataframe.hydrogen[i + 2]) > 100) or \
+                (abs(dataframe.methane[i] - dataframe.methane[i + 1]) > 100) or \
+                (abs(dataframe.methane[i + 1] - dataframe.methane[i + 2]) > 100):
+            dataframe = dataframe.drop(dataframe[i + 1])
+
+
 def request_plot(dataframe, title):
+
     fig, (ax1, ax2, ax3, ax4) = plt.subplots(4)
 
     fig.suptitle(title)
-    ax1.plot_date(dataframe["time"], x_moving_average(dataframe["methane"], 5),
+    ax1.plot_date(dataframe["time"], dataframe["methane"],
                   linestyle="solid", markersize=0, label="Methane")
 
-    ax2.plot_date(dataframe["time"], x_moving_average(dataframe["hydrogen"], 5),
+    ax2.plot_date(dataframe["time"], dataframe["hydrogen"],
                   linestyle="solid", markersize=0, label="Hydrogen")
 
-    ax3.plot_date(dataframe["time"], x_moving_average(dataframe["temperature"], 5),
+    ax3.plot_date(dataframe["time"], dataframe["temperature"],
                   linestyle="solid", markersize=0, label="Temperature")
 
-    ax4.plot_date(dataframe["time"], x_moving_average(dataframe["humidity"], 5),
+    ax4.plot_date(dataframe["time"], dataframe["humidity"],
                   linestyle="solid", markersize=0, label="Humidity")
 
     ax1.xaxis.set_major_locator(myLocator)
@@ -96,7 +140,6 @@ def request_plot(dataframe, title):
 
 
 def time_filler(dataframe):
-
     filled_time = []
 
     gaped_time = dataframe["time"]
@@ -117,18 +160,18 @@ def time_filler(dataframe):
 
             time_list[2] = str(int(time_list[2]) + 1)
 
-        elif int(time_list[2]) == 59 and int(time_list[1]) < 59:
+        elif int(time_list[2]) is 59 and int(time_list[1]) < 59:
 
             time_list[2] = "00"
             time_list[1] = str(int(time_list[1]) + 1)
 
-        elif int(time_list[1]) == 59 and int(time_list[0]) < 23:
+        elif int(time_list[1]) is 59 and int(time_list[0]) < 23:
 
             time_list[2] = "00"
             time_list[1] = "00"
             time_list[0] = str(int(time_list[0]) + 1)
 
-        elif int(time_list[0]) == 23:
+        elif int(time_list[0]) is 23:
 
             time_list[2] = "00"
             time_list[1] = "00"
@@ -155,5 +198,20 @@ def time_filler(dataframe):
     return sorted_data_frame
 
 
-request_plot(df1, "Sensor 1")
-request_plot(df2, "Sensor 2")
+def df_describe(dataframe):
+    df = dataframe
+
+    plt.matshow(df.corr())
+    plt.title("Correlation Matrix")
+    plt.show()
+
+    df.dropna(inplace=True)
+
+    include = ['object', 'float', 'int']
+
+    desc = df.describe(include=include)
+
+    print(desc)
+
+
+plot = Data(df1, 5)
