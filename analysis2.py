@@ -21,11 +21,11 @@ myLocator = mticker.MultipleLocator(100)  # Sets x axis timestamp frequency.
 
 
 class Data:  # Defines analysis algorithm for data object. Acts as a meta-function.
-    def __init__(self, dataframe, rolling_avg=5, antialiasing=False, threshold=False):
-        self.data = dataframe.drop(index=df1.index[:start_index],
+    def __init__(self, dataframe, rolling_avg=5, antialiasing=False, threshold=False, start=0, end=9999999):
+        self.data = dataframe.drop(index=df1.index[:start],
                                    axis=0)  # Sets min point of data range to be analyzed.
 
-        self.data = self.data.drop(index=df1.index[(end_index + 1):],
+        self.data = self.data.drop(index=df1.index[(end + 1):],
                                    axis=0)  # Sets max point of data range to be analyzed.
 
         self.data = self.data.reset_index(drop=True)  # Reset index to prevent gaps that raise errors during averaging.
@@ -159,4 +159,4 @@ def df_describe(dataframe):
     print(desc)
 
 
-plot = Data(df1, 5, applyAntiAliasing, applyThreshold)  # Create data analysis instance of df1, with 5-point moving average
+plot = Data(df1, 5, applyAntiAliasing, applyThreshold, start_index, end_index)  # Create data analysis instance of df1, with 5-point moving average
