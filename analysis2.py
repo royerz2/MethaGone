@@ -2,28 +2,26 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 import numpy as np
 import pandas as pd
-import pendulum
 from matplotlib.pyplot import figure
 from tqdm import tqdm
 
 df1 = pd.read_csv("sensor1.csv")  # Assigns sensor data from probe 1 to variable.
-df2 = pd.read_csv("sensor2.csv")  # Assigns sensor data from probe 2 to variable.
 
 #################################################### PARAMETERS #######################################################
 
 start_index = 1758  # Set to zero to begin from initial entry.
-end_index = 9999  # Set to len(df1.index) to go to the end.
+end_index = len(df1.index)  # Set to len(df1.index) to go to the end.
 applyThreshold = True  # See the plot with threshold values, then turn to true.
-applyAntiAliasing = True  # See the plot before Anti-Aliasing, then turn to true.
+applyAntiAliasing = False  # See the plot before Anti-Aliasing, then turn to true.
 
 plt.style.use("seaborn")  # Sets design language of the plots.
 myLocator = mticker.MultipleLocator(100)  # Sets x axis timestamp frequency.
 
-
 #######################################################################################################################
 
+
 class Data:  # Defines analysis algorithm for data object. Acts as a meta-function.
-    def __init__(self, dataframe, rolling_avg):
+    def __init__(self, dataframe, rolling_avg=5, antialiasing=False, threshold=False):
         self.data = dataframe.drop(index=df1.index[:start_index],
                                    axis=0)  # Sets min point of data range to be analyzed.
 
@@ -32,7 +30,7 @@ class Data:  # Defines analysis algorithm for data object. Acts as a meta-functi
 
         self.data = self.data.reset_index(drop=True)  # Reset index to prevent gaps that raise errors during averaging.
 
-        if applyThreshold:
+        if antialiasing:
             # Apply thresholds to dataframe for plot readability.
             droplist = self.data[(self.data.methane < 200) |
                                  (self.data.hydrogen < 200) |
@@ -43,7 +41,7 @@ class Data:  # Defines analysis algorithm for data object. Acts as a meta-functi
 
             self.data = self.data.drop(droplist)
 
-            self.data = self.data.reset_index(drop=True)
+            self.data = self.data.reset_index(drop=True)  # Re-index after removing values.
 
         print('Data description prior to data wrangling')
         df_describe(self.data)
@@ -53,7 +51,7 @@ class Data:  # Defines analysis algorithm for data object. Acts as a meta-functi
         df_describe(self.data)  # Describes general aspects of the data; Var, Avg, Corr.
 
         # Applies rolling average method to smoothen the data.
-        if applyAntiAliasing:
+        if threshold:
 
             self.toPlot = pd.DataFrame({'methane': x_moving_average(self.data.methane, rolling_avg),
                                         'hydrogen': x_moving_average(self.data.hydrogen, rolling_avg),
@@ -67,23 +65,23 @@ class Data:  # Defines analysis algorithm for data object. Acts as a meta-functi
             request_plot(self.toPlot, 'Sensor 1 Data')  # Applies rolling average method to smoothen the data.
 
         else:
-            request_plot(self.data, 'Sensor 1 Data')
+            request_plot(self.data, 'Sensor 1 Data')  # Gets plot.
 
         print('Data description after data wrangling')
-        df_describe(self.data)
+        df_describe(self.data)  # Does statistical analysis.
 
 
 def x_moving_average(raw_array, x):
-
-    if (x % 2) == 0:
+    if (x % 2) == 0:  # Check if x is odd for proper functionality.
         print("{0} is Even number".format(x))
         print("Rolling average value should be an odd number.")
         raise EOFError
 
     averaged_array = np.array([])
 
-    span = int(x / 2 - 0.5)
+    span = int(x / 2 - 0.5)  # How many data from left and right of a data to average.
 
+    # Un-averageable points set aside to add later
     tbai = raw_array[:span]
     tbaf = raw_array[len(raw_array) - span:]
 
@@ -91,13 +89,13 @@ def x_moving_average(raw_array, x):
 
     for i in tqdm(range(span, len(raw_array) - span)):
         sumlist = []
-        for k in range(i - span, i + span + 1):
+        for k in range(i - span, i + span + 1):  # Get points from left and right of i.
             if raw_array[k] != "n/a":
                 sumlist.append(raw_array[k])
-        tba = sum(sumlist) / x
+        tba = sum(sumlist) / x  # Calculate average of points in span around i.
 
-        averaged_array = np.append(averaged_array, tba)
-
+    # Add back the unaverageable points
+    averaged_array = np.append(averaged_array, tba)
     averaged_array = np.append(averaged_array, tbaf)
 
     return averaged_array
@@ -106,6 +104,7 @@ def x_moving_average(raw_array, x):
 def anti_aliasing(dataframe):
     for i in tqdm(range(start_index, end_index)):
 
+        # If there are any rows that spike 100 up or down delete them.
         if (abs(dataframe.hydrogen[i] - dataframe.hydrogen[i + 1]) > 100) or \
                 (abs(dataframe.hydrogen[i + 1] - dataframe.hydrogen[i + 2]) > 100) or \
                 (abs(dataframe.methane[i] - dataframe.methane[i + 1]) > 100) or \
@@ -114,7 +113,7 @@ def anti_aliasing(dataframe):
 
 
 def request_plot(dataframe, title):
-    fig, (ax1, ax2, ax3, ax4) = plt.subplots(4)
+    fig, (ax1, ax2, ax3, ax4) = plt.subplots(4)  # Make four subplots.
 
     fig.suptitle(title)
     ax1.plot_date(dataframe["time"], dataframe["methane"],
@@ -144,65 +143,6 @@ def request_plot(dataframe, title):
     plt.show()
 
 
-def time_filler(dataframe):
-    filled_time = []
-
-    gaped_time = dataframe["time"]
-
-    max_ = gaped_time.max()
-    min_ = gaped_time.min()
-
-    t1 = pendulum.parse(min_)
-    t2 = pendulum.parse(max_)
-
-    time_list = min_.split(":")
-
-    delta = t2 - t1
-
-    for i in tqdm(range(delta.seconds)):
-
-        if int(time_list[2]) < 59:
-
-            time_list[2] = str(int(time_list[2]) + 1)
-
-        elif int(time_list[2]) == 59 and int(time_list[1]) < 59:
-
-            time_list[2] = "00"
-            time_list[1] = str(int(time_list[1]) + 1)
-
-        elif int(time_list[1]) == 59 and int(time_list[0]) < 23:
-
-            time_list[2] = "00"
-            time_list[1] = "00"
-            time_list[0] = str(int(time_list[0]) + 1)
-
-        elif int(time_list[0]) == 23:
-
-            time_list[2] = "00"
-            time_list[1] = "00"
-            time_list[0] = "00"
-
-        else:
-            raise Warning
-
-        added_time = time_list[0].zfill(2) + ":" + time_list[1].zfill(2) + ":" + time_list[2].zfill(2)
-        df_line = pd.DataFrame.from_dict({"methane": ["n/a"],
-                                          "hydrogen": ["n/a"],
-                                          "humidity": ["n/a"],
-                                          "temperature": ["n/a"],
-                                          "time": [added_time]})
-
-        if str(df_line.time[0]) not in gaped_time.values.tolist():
-            dataframe = pd.concat([df_line, dataframe])
-
-    dataframe["time"] = pd.to_datetime(dataframe.time, format="%H:%M:%S")
-    sorted_data_frame = dataframe.sort_values(by=['time'], ignore_index=True)
-
-    print(sorted_data_frame)
-
-    return sorted_data_frame
-
-
 def df_describe(dataframe):
     df = dataframe
 
@@ -219,4 +159,4 @@ def df_describe(dataframe):
     print(desc)
 
 
-plot = Data(df1, 5)
+plot = Data(df1, 5, applyAntiAliasing, applyThreshold)  # Create data analysis instance of df1, with 5-point moving average
