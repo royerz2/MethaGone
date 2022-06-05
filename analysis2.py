@@ -17,10 +17,11 @@ applyAntiAliasing = False  # See the plot before Anti-Aliasing, then turn to tru
 plt.style.use("seaborn")  # Sets design language of the plots.
 myLocator = mticker.MultipleLocator(100)  # Sets x axis timestamp frequency.
 
+
 #######################################################################################################################
 
 
-class Data:  # Defines analysis algorithm for data object. Acts as a meta-function.
+class Analysis:  # Defines analysis algorithm for data object. Acts as a meta-function.
     def __init__(self, dataframe, rolling_avg=5, antialiasing=False, threshold=False, start=0, end=9999999):
         self.data = dataframe.drop(index=df1.index[:start],
                                    axis=0)  # Sets min point of data range to be analyzed.
@@ -159,4 +160,5 @@ def df_describe(dataframe):
     print(desc)
 
 
-plot = Data(df1, 5, applyAntiAliasing, applyThreshold, start_index, end_index)  # Create data analysis instance of df1, with 5-point moving average
+# Create data analysis instance of df1, with 5-point moving average
+plot = Analysis(df1, 5, applyAntiAliasing, applyThreshold, start_index, end_index)
