@@ -1,4 +1,4 @@
-//Include required libraries
+a//Include required libraries
 #include "WiFi.h"
 #include <HTTPClient.h>
 #include "time.h"
@@ -14,7 +14,7 @@
 #define DHTTYPE DHT22
 #define SENSOR_NAME "Sensor2"
 
-bool WPA2 = false;
+bool WPA2 = true;
 
 DHT dht(DHTPIN, DHTTYPE);
 

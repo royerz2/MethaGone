@@ -56,8 +56,7 @@ d = {'methane', 'hydrogen', 'temperature', 'humidity'}
 
 df = pd.DataFrame(data=d)
 
-while 1:
-
+while True:
     now = datetime.now()
     current_time = now.strftime("%H:%M:%S")
 
