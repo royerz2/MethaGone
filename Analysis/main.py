@@ -1,5 +1,4 @@
 import serial
-import pandas as pd
 import csv
 from datetime import datetime
 import serial.tools.list_ports as ports
@@ -51,10 +50,6 @@ for i in range(sensor_count):
 # read from Arduino
 input_str = ser.readline()
 print("Read input" + input_str.decode("utf-8").strip() + " from Arduino")
-
-d = {'methane', 'hydrogen', 'temperature', 'humidity'}
-
-df = pd.DataFrame(data=d)
 
 while True:
     now = datetime.now()
